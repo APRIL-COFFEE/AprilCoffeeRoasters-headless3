@@ -20,7 +20,15 @@ function renderInline(text: string): ReactNode[] {
     const token = match[0];
     if (token.startsWith("**")) {
       nodes.push(
-        <strong key={key++}>{token.slice(2, -2)}</strong>,
+        <strong
+          key={key++}
+          style={{
+            fontWeight: 700,
+            fontSynthesis: "weight",
+          }}
+        >
+          {token.slice(2, -2)}
+        </strong>,
       );
     } else {
       const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);

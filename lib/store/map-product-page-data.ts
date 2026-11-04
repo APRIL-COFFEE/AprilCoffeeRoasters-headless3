@@ -1,17 +1,18 @@
 import type {
-    ProductPageClientProps,
-    ProductPageImage,
-    ProductPageRelated,
-    ProductPageVariant,
+  ProductPageClientProps,
+  ProductPageImage,
+  ProductPageRelated,
+  ProductPageVariant,
 } from "components/store/product/product-page-types";
 import { DEFAULT_OPTION } from "lib/constants";
 import { shopifyImageUrl } from "lib/shopify-image-url";
 import type { Product, ProductVariant } from "lib/shopify/types";
 import { parseProductDescriptionLines } from "lib/store/parse-product-description";
 import {
-    parseRecipeContent,
-    parseSizeChart,
-    parseTechnicalDetails,
+  parseInfoLink,
+  parseRecipeContent,
+  parseSizeChart,
+  parseTechnicalDetails,
 } from "lib/store/parse-product-metafields";
 
 /** Collections that may show the product `recommendations` metafield. */
@@ -109,6 +110,10 @@ export function mapProductPageData(
     sizeChart: parseSizeChart(product.sizeChart?.value),
     recommendations,
     supplierInformation: parseRecipeContent(product.supplierInformation?.value),
+    infoLink: parseInfoLink(
+      product.infoLink?.value,
+      product.infoLinkLabel?.value,
+    ),
     images,
     variants,
     relatedProducts,
