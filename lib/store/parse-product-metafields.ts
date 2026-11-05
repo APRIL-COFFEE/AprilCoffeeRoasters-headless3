@@ -53,12 +53,7 @@ function defaultInfoLinkLabel(href: string): string {
   return "View Product Info";
 }
 
-/**
- * Product Details CTA from Shopify metafields `custom.info_link` (+ optional
- * `custom.info_link_label`). Accepts site paths
- * (`/coffee-inf-recipes/volcan-azul`, `/product/coffee-grinder`), bare coffee-info
- * slugs (`volcan-azul`), or absolute URLs.
- */
+
 export function parseInfoLink(
   url: string | null | undefined,
   label?: string | null | undefined,
@@ -86,7 +81,6 @@ export function parseInfoLink(
   ) {
     href = `/${trimmed}`;
   } else {
-    // Treat bare slugs as coffee-info farm pages (primary coffee use case).
     href = `/coffee-inf-recipes/${trimmed.replace(/^\/+/, "")}`;
   }
 
@@ -147,11 +141,7 @@ function splitIntoSentences(text: string): string[] {
     .filter(Boolean);
 }
 
-/**
- * When Shopify stores supplier/prose copy as one unbroken block, split it into
- * short paragraphs (pairs of sentences) so the accordion isn't a wall of text.
- * Already-broken multi-line content is left alone.
- */
+
 function splitLongProseBlock(text: string): string[] | null {
   const trimmed = text.trim();
   if (!trimmed || trimmed.includes("\n") || trimmed.includes("•")) return null;
