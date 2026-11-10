@@ -181,6 +181,11 @@ export const socialLinks: LandingLink[] = [
     href: "/product/april-tasting-menu",
     external: false,
   },
+  {
+    label: "My Account",
+    href: "/account",
+    external: false,
+  },
 ];
 
 export const LATEST_NAV_LABEL = "Latest";
