@@ -187,7 +187,7 @@ export const LATEST_NAV_LABEL = "Latest";
 
 export const defaultTriFergNav: LandingTriFergNavItem[] = [
   {
-    title: "LOCATIONS",
+    title: "ABOUT US",
     href: "/shops",
     fillClass: "fill-tri-ferg-red",
     ariaLabel: "shops-tri-ferg-link",
