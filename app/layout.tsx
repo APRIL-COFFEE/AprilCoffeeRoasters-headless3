@@ -19,6 +19,9 @@ export const metadata = {
     follow: true,
     index: true,
   },
+  verification: {
+    google: "google6a9965b7b38a0689.html",
+  },
 };
 
 export default async function RootLayout({

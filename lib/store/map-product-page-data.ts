@@ -15,11 +15,6 @@ import {
   parseTechnicalDetails,
 } from "lib/store/parse-product-metafields";
 
-/** Collections that may show the product `recommendations` metafield. */
-const RECOMMENDATIONS_COLLECTION_HANDLES = new Set([
-  "filter-coffee",
-  "limited-coffee",
-]);
 
 function formatVariantPrice(variant: ProductVariant): string {
   const { amount, currencyCode } = variant.price;
@@ -49,12 +44,6 @@ function mapProductImages(
     zoom: image.url.split("?")[0] ?? image.url,
     label: `${handle}-image-${index}`,
   }));
-}
-
-function productAllowsRecommendations(product: Product): boolean {
-  return product.collections.some((collection) =>
-    RECOMMENDATIONS_COLLECTION_HANDLES.has(collection.handle),
-  );
 }
 
 export function mapProductPageData(
@@ -93,9 +82,7 @@ export function mapProductPageData(
     });
   }
 
-  const recommendations = productAllowsRecommendations(product)
-    ? parseRecipeContent(product.recommendations?.value)
-    : null;
+  const recommendations = parseRecipeContent(product.recommendations?.value);
 
   return {
     product,

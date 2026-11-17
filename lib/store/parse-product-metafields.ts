@@ -61,28 +61,21 @@ export function parseInfoLink(
   const trimmed = url?.trim();
   if (!trimmed) return null;
 
-  let href: string;
-  let external = false;
+  const external = /^https?:\/\//i.test(trimmed);
 
-  if (/^https?:\/\//i.test(trimmed)) {
+  if (external) {
     try {
-      // Validate absolute URL shape.
       new URL(trimmed);
     } catch {
       return null;
     }
-    href = trimmed;
-    external = true;
-  } else if (trimmed.startsWith("/")) {
-    href = trimmed;
-  } else if (
-    trimmed.startsWith("coffee-inf-recipes") ||
-    trimmed.startsWith("product/")
-  ) {
-    href = `/${trimmed}`;
-  } else {
-    href = `/coffee-inf-recipes/${trimmed.replace(/^\/+/, "")}`;
   }
+
+
+  const href =
+    external || trimmed.startsWith("/") || trimmed.startsWith("#")
+      ? trimmed
+      : `/${trimmed}`;
 
   return {
     href,
@@ -120,13 +113,11 @@ export function parseTechnicalDetails(
   };
 }
 
-/** Multi-line / rich-text recipe body from Shopify metafields. */
 export type ParsedRecipeContent = ParsedTechnicalDetails;
 
 const LONG_PROSE_CHAR_THRESHOLD = 280;
 const SENTENCES_PER_PARAGRAPH = 2;
 
-/** Fix missing spaces after sentence-ending periods (e.g. "century.The"). */
 function normalizeSentenceSpacing(text: string): string {
   return text.replace(/([a-z0-9])\.([A-Z])/g, "$1. $2");
 }
