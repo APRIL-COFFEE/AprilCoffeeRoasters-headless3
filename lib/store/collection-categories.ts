@@ -71,7 +71,7 @@ export const collectionCategories = [
   },
   {
     label: "Bundles",
-    handle: "bundles",
+    handle: "bundles-1",
     description:
       "Brewer bundles with paper filters and 250g of April filter coffee.",
   },
