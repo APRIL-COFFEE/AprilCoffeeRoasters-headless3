@@ -548,17 +548,36 @@ export async function getProductsPage({
   };
 }
 
+const emptyProductsPage: ProductsPage = {
+  products: [],
+  pageInfo: { hasNextPage: false, endCursor: null },
+};
+
 export async function loadCollectionProductsPage({
   collection,
   cursor,
   first = COLLECTION_PRODUCTS_PAGE_SIZE,
+  query,
 }: {
   collection: string;
   cursor?: string | null;
   first?: number;
+  query?: string;
 }): Promise<ProductsPage> {
   const sortKey = "CREATED_AT";
   const reverse = true;
+  const search = query?.replace(/["\\]/g, " ").replace(/\s+/g, " ").trim();
+
+  if (search) {
+    const productsPage = await getProductsPage({
+      query: search,
+      sortKey: "RELEVANCE",
+      first,
+      after: cursor,
+    });
+
+    return productsPage ?? emptyProductsPage;
+  }
 
   if (collection !== "all") {
     const collectionPage = await getCollectionProductsPage({
@@ -581,12 +600,7 @@ export async function loadCollectionProductsPage({
     after: cursor,
   });
 
-  return (
-    productsPage ?? {
-      products: [],
-      pageInfo: { hasNextPage: false, endCursor: null },
-    }
-  );
+  return productsPage ?? emptyProductsPage;
 }
 
 export async function getCollections(): Promise<Collection[]> {

@@ -33,18 +33,38 @@ export default function CollectionProductGrid({
 }) {
   const [products, setProducts] = useState(initialProducts);
   const [pageInfo, setPageInfo] = useState(initialPageInfo);
+  const [searchPage, setSearchPage] = useState<
+    (ProductsPage & { query: string }) | null
+  >(null);
+  const [searchPending, setSearchPending] = useState(false);
   const [loading, setLoading] = useState(false);
   const loadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const collectionRef = useRef(collection);
   const isAllCollection = collection === "all";
+  const searchQuery = filters?.query.trim() ?? "";
+  const searchReady = searchPage?.query === searchQuery;
+  const sourceProducts = searchQuery
+    ? searchReady
+      ? searchPage.products
+      : []
+    : products;
+  const activePageInfo = searchQuery
+    ? searchReady
+      ? searchPage.pageInfo
+      : { hasNextPage: false, endCursor: null }
+    : pageInfo;
 
   const visibleProducts = useMemo(() => {
     if (!filters || !applyFilters) {
-      return products;
+      return sourceProducts;
     }
-    return applyFilters(products, filters);
-  }, [products, filters, applyFilters]);
+
+    return applyFilters(
+      sourceProducts,
+      searchQuery ? { ...filters, query: "" } : filters,
+    );
+  }, [sourceProducts, filters, applyFilters, searchQuery]);
 
   useEffect(() => {
     if (collectionRef.current !== collection) {
@@ -82,19 +102,64 @@ export default function CollectionProductGrid({
     products.length,
   ]);
 
-  const loadMore = useCallback(async () => {
-    if (!pageInfo.hasNextPage || !pageInfo.endCursor || loadingRef.current) {
+  useEffect(() => {
+    if (!searchQuery) {
+      setSearchPage(null);
+      setSearchPending(false);
       return;
     }
 
-    const cursor = pageInfo.endCursor;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearchPending(true);
+
+      try {
+        const response = await fetch(
+          `/api/collections/products?${new URLSearchParams({ q: searchQuery })}`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as ProductsPage;
+        setSearchPage({ ...data, query: searchQuery });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setSearchPending(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const loadMore = useCallback(async () => {
+    if (
+      searchPending ||
+      !activePageInfo.hasNextPage ||
+      !activePageInfo.endCursor ||
+      loadingRef.current
+    ) {
+      return;
+    }
+
+    const cursor = activePageInfo.endCursor;
     loadingRef.current = true;
     setLoading(true);
 
-    const apiUrl = `/api/collections/products?${new URLSearchParams({
-      collection,
-      cursor,
-    })}`;
+    const params = new URLSearchParams(
+      searchQuery ? { q: searchQuery, cursor } : { collection, cursor },
+    );
+    const apiUrl = `/api/collections/products?${params}`;
 
     if (isAllCollection) {
       logCollectionAll("fetch start", {
@@ -115,48 +180,65 @@ export default function CollectionProductGrid({
 
       const data = (await response.json()) as ProductsPage;
 
-      setProducts((current) => {
-        const seen = new Set(current.map((product) => product.id));
-        const next = data.products.filter((product) => !seen.has(product.id));
-        const merged = [...current, ...next];
+      if (searchQuery) {
+        setSearchPage((current) => {
+          const base =
+            current?.query === searchQuery ? current.products : [];
+          const seen = new Set(base.map((product) => product.id));
+          const next = data.products.filter((product) => !seen.has(product.id));
 
-        if (isAllCollection) {
-          console.groupCollapsed("[collections/all] api response");
-          console.log("summary", {
-            fetched: data.products.length,
-            added: next.length,
-            duplicatesSkipped: data.products.length - next.length,
-            totalDisplayed: merged.length,
-            hasNextPage: data.pageInfo.hasNextPage,
-            nextCursor: decodePaginationCursor(data.pageInfo.endCursor),
-            firstAdded: next[0]?.title ?? null,
-            lastAdded: next.at(-1)?.title ?? null,
-          });
-          console.log("pageInfo", data.pageInfo);
-          console.log("products", data.products);
-          console.groupEnd();
-        }
+          return {
+            query: searchQuery,
+            products: [...base, ...next],
+            pageInfo: data.pageInfo,
+          };
+        });
+      } else {
+        setProducts((current) => {
+          const seen = new Set(current.map((product) => product.id));
+          const next = data.products.filter((product) => !seen.has(product.id));
+          const merged = [...current, ...next];
 
-        return merged;
-      });
-      setPageInfo(data.pageInfo);
-      onPaginationChange?.(cursor);
+          if (isAllCollection) {
+            console.groupCollapsed("[collections/all] api response");
+            console.log("summary", {
+              fetched: data.products.length,
+              added: next.length,
+              duplicatesSkipped: data.products.length - next.length,
+              totalDisplayed: merged.length,
+              hasNextPage: data.pageInfo.hasNextPage,
+              nextCursor: decodePaginationCursor(data.pageInfo.endCursor),
+              firstAdded: next[0]?.title ?? null,
+              lastAdded: next.at(-1)?.title ?? null,
+            });
+            console.log("pageInfo", data.pageInfo);
+            console.log("products", data.products);
+            console.groupEnd();
+          }
+
+          return merged;
+        });
+        setPageInfo(data.pageInfo);
+        onPaginationChange?.(cursor);
+      }
     } finally {
       loadingRef.current = false;
       setLoading(false);
     }
   }, [
+    activePageInfo.endCursor,
+    activePageInfo.hasNextPage,
     collection,
     isAllCollection,
     onPaginationChange,
-    pageInfo.endCursor,
-    pageInfo.hasNextPage,
+    searchPending,
+    searchQuery,
   ]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
 
-    if (!sentinel || !pageInfo.hasNextPage) {
+    if (!sentinel || !activePageInfo.hasNextPage) {
       return;
     }
 
@@ -200,7 +282,7 @@ export default function CollectionProductGrid({
       mediaQuery.removeEventListener("change", handleMediaChange);
       observer?.disconnect();
     };
-  }, [loadMore, pageInfo.hasNextPage]);
+  }, [activePageInfo.hasNextPage, loadMore]);
 
   return (
     <>
@@ -217,6 +299,15 @@ export default function CollectionProductGrid({
               priority={index < 6}
             />
           ))}
+          {searchQuery &&
+          searchReady &&
+          !searchPending &&
+          !loading &&
+          visibleProducts.length === 0 ? (
+            <p className="col-span-full py-10 text-center text-sm font-bold uppercase">
+              No products found
+            </p>
+          ) : null}
         </div>
 
         {onFilterClick ? (
@@ -245,7 +336,7 @@ export default function CollectionProductGrid({
         ref={sentinelRef}
         className="flex min-h-24 items-center justify-center py-10"
       >
-        {loading ? (
+        {loading || searchPending ? (
           <span className="text-sm font-bold uppercase">Loading…</span>
         ) : null}
       </div>

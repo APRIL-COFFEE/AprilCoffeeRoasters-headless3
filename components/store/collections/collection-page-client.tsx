@@ -18,7 +18,7 @@ import {
   paginationCursorFromSearchParams,
   searchParamsFromCollectionState,
 } from "lib/store/collection-pagination";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Footer from "../layout/footer";
 
@@ -32,7 +32,7 @@ export default function CollectionPageClient({
   initialPageInfo: PageInfo;
 }) {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  // const router = useRouter();
   const pathname = usePathname();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -77,11 +77,16 @@ export default function CollectionPageClient({
       return;
     }
 
-    if (
-      areCollectionUrlParamsEqual(searchParams, filters, paginationCursor)
-    ) {
+    // if (
+    //   areCollectionUrlParamsEqual(searchParams, filters, paginationCursor)
+
+    // ) {
+        const currentParams = new URLSearchParams(window.location.search);
+    if (areCollectionUrlParamsEqual(currentParams, filters, paginationCursor)) {
       return;
     }
+      // return;
+    // }
 
     const params = searchParamsFromCollectionState({
       filters,
@@ -101,8 +106,15 @@ export default function CollectionPageClient({
       console.groupEnd();
     }
 
-    router.replace(nextUrl, { scroll: false });
-  }, [collection, filters, paginationCursor, pathname, router, searchParams]);
+    // router.replace(nextUrl, { scroll: false });
+  // }, [collection, filters, paginationCursor, pathname, router, searchParams]);
+   const historyState = window.history.state;
+    window.history.replaceState(
+      historyState?.__NA ? historyState : { ...historyState, __NA: true },
+      "",
+      nextUrl,
+    );
+  }, [collection, filters, paginationCursor, pathname]);
 
   const setFilters = useCallback(
     (
@@ -122,13 +134,28 @@ export default function CollectionPageClient({
     setFilters(defaultCollectionFilters);
   };
 
+  const isSearching = filters.query.trim().length > 0;
+
+  useEffect(() => {
+    if (!isSearching) {
+      return;
+    }
+
+    const previousTitle = document.title;
+    document.title = "Search | April Coffee";
+
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [isSearching]);
+
   return (
     <>
       <Logo onMenuOpenChange={setMenuOpen} />
       <div className="mx-auto mt-0 min-h-0 w-full max-w-[1400px] overflow-hidden bg-white sm:mt-1 max-md:overflow-visible">
         <CategoryNav
           menuOpen={menuOpen}
-          activeCollection={collection}
+          activeCollection={isSearching ? undefined : collection}
           onFilterClick={() => setFilterOpen(true)}
         />
 
@@ -159,7 +186,7 @@ h-[calc(100vh-30px)]
   max-md:-translate-x-0
 "
         >
-          {initialProducts.length === 0 ? (
+          {initialProducts.length === 0 && !isSearching ? (
             <p className="py-10 text-center text-sm font-bold uppercase">
   This collection is currently empty. We’re working on bringing something new your way — please check back soon.
             </p>

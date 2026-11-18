@@ -20,6 +20,7 @@ const COLLECTION_HANDLE_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
 const CURSOR_PATTERN = /^[A-Za-z0-9+/=_-]+$/;
 const MAX_COLLECTION_LENGTH = 100;
 const MAX_CURSOR_LENGTH = 512;
+const MAX_QUERY_LENGTH = 80;
 
 export async function GET(request: NextRequest) {
   await connection();
@@ -30,6 +31,8 @@ export async function GET(request: NextRequest) {
       "all";
     const cursor =
       request.nextUrl.searchParams.get("cursor")?.trim() || undefined;
+    const query =
+      request.nextUrl.searchParams.get("q")?.trim() || undefined;
 
     if (
       collection.length > MAX_COLLECTION_LENGTH ||
@@ -48,9 +51,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
     }
 
+    if (query !== undefined && query.length > MAX_QUERY_LENGTH) {
+      return NextResponse.json({ error: "Invalid search" }, { status: 400 });
+    }
+
     const page = await loadCollectionProductsPage({
       collection,
       cursor,
+      query,
     });
 
     return NextResponse.json(page);

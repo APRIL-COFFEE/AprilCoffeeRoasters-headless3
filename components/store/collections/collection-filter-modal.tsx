@@ -2,6 +2,7 @@
 
 import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
 import clsx from "clsx";
+import { useEffect, useState } from "react";
 
 const filterBtnClass =
   "flex items-center justify-center whitespace-nowrap border-2 border-black px-4 text-center cursor-pointer text-[10px] leading-[15px] font-bold uppercase max-md:my-1 max-md:h-8 max-md:py-1 max-md:text-[13px] max-md:leading-[18px]";
@@ -25,6 +26,19 @@ export default function CollectionFilterModal({
   onQueryChange,
   onClear,
 }: CollectionFilterModalProps) {
+  const [draft, setDraft] = useState(query);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDraft(query);
+    }
+  }, [isOpen, query]);
+
+  function submitSearch() {
+    onQueryChange(draft);
+    onClose();
+  }
+
   return (
     <Dialog open={isOpen} onClose={onClose} className="fixed inset-0 z-50">
       <DialogBackdrop
@@ -97,27 +111,43 @@ export default function CollectionFilterModal({
                   Search
                 </h3>
 
-                <div className="mt-2">
+                <form
+                  className="mt-2 flex border-2 border-black"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    submitSearch();
+                  }}
+                >
                   <input
                     type="search"
-                    value={query}
-                    onChange={(event) => onQueryChange(event.target.value)}
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
                     placeholder="Search products"
                     aria-label="search-products"
                     autoComplete="off"
-                    className="w-full border-2 border-black bg-white px-3 py-2 text-[13px] leading-[18px] text-black outline-none placeholder:text-standard-grey placeholder:normal-case"
+                    className="min-w-0 flex-1 border-0 bg-white px-3 py-2 text-[13px] leading-[18px] text-black outline-none placeholder:text-standard-grey placeholder:normal-case [&::-webkit-search-cancel-button]:hidden"
                   />
-                </div>
+                  <button
+                    type="submit"
+                    aria-label="search-button"
+                    className="btn-brand flex shrink-0 cursor-pointer items-center justify-center border-0 border-l-2 border-black px-4 text-[10px] leading-[15px] font-bold uppercase max-md:text-[13px] max-md:leading-[18px]"
+                  >
+                    Search
+                  </button>
+                </form>
               </div>
 
               <div className="mt-6 flex justify-end">
                 <button
                   type="button"
                   aria-label="clear-btn"
-                  onClick={onClear}
+                  onClick={() => {
+                    setDraft("");
+                    onClear();
+                  }}
                   className={clsx(
                     filterBtnClass,
-                    "btn-brand bg-black py-1"
+                    "btn-brand py-1"
                   )}
                 >
                   Clear
